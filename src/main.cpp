@@ -8,9 +8,8 @@
 #include "SearchEngine.h"
 #include "Context.h"
 #include <imgui.h>
-#include <regex>
 
-void inputText(std::string& text, const std::string& label, const std::string& hint) {
+void inputText(std::string& text, const std::string& label, const std::string& hint = "") {
 	static std::string inputBuffer;
 	if (inputBuffer.size() == 0) {
 		inputBuffer.resize(1024 * 16);
@@ -36,11 +35,21 @@ void windowSearch() {
 
 void windowResults() {
 	if (ImGui::Begin("Results")) {
+
+		int count = 0;
+		for (auto& f : context.engine.files) {
+			count += f.results.size();
+		}
+		ImGui::Text("Total matches: %i", count);
+
+
 		for (int fileId = 0; fileId < context.engine.files.size(); fileId++) {
 			auto& f = context.engine.files[fileId];
 			if (f.results.size() > 0) {
 
-				if (ImGui::TreeNodeEx(f.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+				std::string lable = std::string("(") + std::to_string(f.results.size()) + ") " + f.name;
+
+				if (ImGui::TreeNodeEx(lable.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
 
 					if (ImGui::BeginTable("", 3)) {
 
@@ -48,12 +57,12 @@ void windowResults() {
 						ImGui::TableSetupColumn("line", ImGuiTableColumnFlags_WidthFixed, 45);
 						ImGui::TableSetupColumn("column", ImGuiTableColumnFlags_WidthFixed, 45);
 
-						ImGui::TableNextColumn();
-						ImGui::Text("text");
-						ImGui::TableNextColumn();
-						ImGui::Text("line");
-						ImGui::TableNextColumn();
-						ImGui::Text("column");
+						//ImGui::TableNextColumn();
+						//ImGui::Text("text");
+						//ImGui::TableNextColumn();
+						//ImGui::Text("line");
+						//ImGui::TableNextColumn();
+						//ImGui::Text("column");
 
 						for (int resultId = 0; resultId < f.results.size(); resultId++) {
 							ImGui::PushID(resultId);
@@ -65,6 +74,32 @@ void windowResults() {
 							if (ImGui::IsItemActivated()) {
 								context.selectedFile = fileId;
 								context.selectedResult = resultId;
+
+								int c = r.column - 1;
+								auto &l = f.lines[r.line - 1];
+								for (int i = 0; i < std::min(r.column, (int)l.size()); i++) {
+									if (l[i] == '\t') {
+										c += context.editor.GetTabSize() - 1;
+									}
+								}
+
+								if (f.id != context.currentFileId) {
+									context.editor.SetText(f.content);
+									context.currentFileId = f.id;
+								}
+								context.editor.SetReadOnly(true);
+								context.editor.SetShowWhitespaces(false);
+								context.editor.SetSelection(TextEditor::Coordinates(r.line - 1, c), TextEditor::Coordinates(r.line - 1, c + r.text.size()));
+								context.editor.SetCursorPosition(TextEditor::Coordinates(r.line - 1, c));
+
+
+								TextEditor::Breakpoints points;
+								for (int resultId = 0; resultId < f.results.size(); resultId++) {
+									auto& r = f.results[resultId];
+									points.insert(r.line);
+								}
+								context.editor.SetBreakpoints(points);
+								
 							}
 
 							ImGui::TableNextColumn();
@@ -89,46 +124,65 @@ void windowResults() {
 }
 
 void windowFile() {
-	if (ImGui::Begin("File", nullptr, ImGuiWindowFlags_AlwaysHorizontalScrollbar)) {
-		if (ImGui::BeginTable("", 2)) {
-			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 30);
+	if (ImGui::Begin("File")) {
+		context.editor.Render("##");
+	}
+	ImGui::End();
+}
 
-			if (context.selectedFile != -1) {
-				if (context.engine.files.size() > context.selectedFile) {
-					auto& f = context.engine.files[context.selectedFile];
-					if (f.results.size() > context.selectedResult) {
-						auto& r = f.results[context.selectedResult];
-						for (int line = 0; line < f.lines.size(); line++) {
-							if (line + 1 == r.line) {
-								ImGui::TableNextColumn();
-								ImGui::Text("%i", line + 1);
-								ImGui::TableNextColumn();
-								ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-								ImGui::Text("%s", f.lines[line].c_str());
-								ImGui::PopStyleColor(1);
-								ImGui::TableNextRow();
-							}
-							else {
-								ImGui::TableNextColumn();
-								ImGui::Text("%i", line + 1);
-								ImGui::TableNextColumn();
-								ImGui::Text("%s", f.lines[line].c_str());
-								ImGui::TableNextRow();
-							}
-						}
+void windowOutput() {
+	if (ImGui::Begin("Output", nullptr)) {
+		inputText(context.outputFile, "file");
+		ImGui::Checkbox("full lines", &context.outputFullLines);
+
+		bool generate = false;
+
+		if (ImGui::Button("Generate")) {
+			if (std::filesystem::exists(context.outputFile)) {
+				ImGui::OpenPopup("exists");
+			}
+			else {
+				generate = true;
+			}
+		}
+
+		if (ImGui::BeginPopup("exists")) {
+
+			ImGui::Text("The file already exists.\nDo you want to override it?");
+			if (ImGui::Button("Override")) {
+				generate = true;
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel")) {
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
+
+		if (generate) {
+			std::ofstream stream(context.outputFile);
+
+			for (auto& f : context.engine.files) {
+				for (auto& r : f.results) {
+					if (context.outputFullLines) {
+						stream << f.lines[r.line - 1] << "\n";
 					}
 					else {
-						for (int line = 0; line < f.lines.size(); line++) {
-							ImGui::TableNextColumn();
-							ImGui::Text("%i", line + 1);
-							ImGui::TableNextColumn();
-							ImGui::Text("%s", f.lines[line].c_str());
-							ImGui::TableNextRow();
-						}
+						stream << r.text << "\n";
 					}
 				}
 			}
-			ImGui::EndTable();
+			stream.close();
+
+			context.selectedFile = -1;
+			context.selectedResult = -1;
+			context.currentFileId = -1;
+
+			context.editor.SetText(readFile(context.outputFile));
+			context.editor.SetReadOnly(true);
+			context.editor.SetShowWhitespaces(false);
+
 		}
 	}
 	ImGui::End();
@@ -145,6 +199,9 @@ int main(int argc, char* args[]) {
 	if (config.size() > 1) {
 		context.search = config[1];
 	}
+	if (config.size() > 2) {
+		context.outputFile = config[2];
+	}
 
 	if (!std::filesystem::exists("layout.ini")) {
 		if (std::filesystem::exists("../../../layout.ini")) {
@@ -160,11 +217,12 @@ int main(int argc, char* args[]) {
 		windowSearch();
 		windowResults();
 		windowFile();
+		windowOutput();
 
 		window.updateEnd();
 	}
 
-	writeFile("project.ini", join({ context.file, context.search }, "\n"));
+	writeFile("project.ini", join({ context.file, context.search, context.outputFile }, "\n"));
 	window.shutdown();
 	return 0;
 }

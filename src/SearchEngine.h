@@ -20,6 +20,7 @@ public:
 	public:
 		int id;
 		std::string name;
+		std::string content;
 		std::vector<std::string> lines;
 		std::vector<Result> results;
 	};

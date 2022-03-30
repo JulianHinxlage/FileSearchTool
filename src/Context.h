@@ -6,6 +6,7 @@
 
 #include "pch.h"
 #include "SearchEngine.h"
+#include "TextEditor/TextEditor.h"
 
 class Context {
 public:
@@ -16,6 +17,11 @@ public:
 	bool isFirstFrame = true;
 
 	SearchEngine engine;
+	TextEditor editor;
+	int currentFileId = -1;
+
+	bool outputFullLines = false;
+	std::string outputFile;
 };
 
 extern Context context;

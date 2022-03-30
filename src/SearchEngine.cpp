@@ -18,6 +18,8 @@ void SearchEngine::search(const std::string &fileNameInput, const std::string& s
 		file.name = fileName;
 
 		std::string data = readFile(fileName);
+		file.content = data;
+
 		if (data.size() > 0) {
 			auto lines = split(data, "\n", true);
 			file.lines = lines;
