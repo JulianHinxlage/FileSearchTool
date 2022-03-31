@@ -27,5 +27,5 @@ public:
 
 	std::vector<File> files;
 
-	void search(const std::string& fileNameInput, const std::string& searchPattern);
+	void search(const std::vector<std::string>& fileNames, const std::string& searchPattern);
 };

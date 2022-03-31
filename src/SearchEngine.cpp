@@ -7,10 +7,10 @@
 #include "strutil.h"
 #include <regex>
 
-void SearchEngine::search(const std::string &fileNameInput, const std::string& searchPattern) {
+void SearchEngine::search(const std::vector<std::string>& fileNames, const std::string& searchPattern) {
 	files.clear();
 
-	auto fileNames = split(fileNameInput, ";");
+
 	for (int fileId = 0; fileId < fileNames.size(); fileId++) {
 		auto& fileName = fileNames[fileId];
 		File file;

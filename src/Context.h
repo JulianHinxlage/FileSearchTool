@@ -7,10 +7,12 @@
 #include "pch.h"
 #include "SearchEngine.h"
 #include "TextEditor/TextEditor.h"
+#include "InputWindow.h"
 
 class Context {
 public:
-	std::string file;
+	InputWindow input;
+
 	std::string search;
 	int selectedFile = -1;
 	int selectedResult = -1;
@@ -22,6 +24,16 @@ public:
 
 	bool outputFullLines = false;
 	std::string outputFile;
+
+	//open flags
+	bool openInput;
+	bool openSearch;
+	bool openResults;
+	bool openFile;
+	bool openOutput;
+
+	void init();
+	void inputText(std::string& text, const std::string& label, const std::string& hint = "");
 };
 
 extern Context context;
