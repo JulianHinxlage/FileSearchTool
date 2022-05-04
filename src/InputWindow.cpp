@@ -68,7 +68,7 @@ std::vector<std::string> InputWindow::getFiles() {
 			std::string file = entry.path().string().substr(dir.size());
 			std::cout << file << std::endl;
 			for (auto& pattern : patterns) {
-                if (wildcardMatch(file, pattern)) {
+                if (wildcardMatch(replace(file, "/", "\\"), replace(pattern, "/", "\\"))) {
 					fileList.push_back(entry.path().string());
                     break;
 				}

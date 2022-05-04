@@ -13,7 +13,6 @@ class Context {
 public:
 	InputWindow input;
 
-	std::string search;
 	int selectedFile = -1;
 	int selectedResult = -1;
 	bool isFirstFrame = true;

@@ -59,11 +59,80 @@ void windowSearch() {
 	if (context.openSearch) {
 		if (ImGui::Begin("Search", &context.openSearch, ImGuiWindowFlags_NoCollapse)) {
 
-			context.inputText(context.search, "pattern", "");
 
+			for (int i = 0; i < context.engine.steps.size(); i++) {
+				ImGui::PushID(i);
+				auto& step = context.engine.steps[i];
+				ImGui::Checkbox("", &step.active);
+				ImGui::SameLine();
+				if (ImGui::Button("-")) {
+					context.engine.steps.erase(context.engine.steps.begin() + i);
+					ImGui::PopID();
+					break;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("+")) {
+					context.engine.steps.insert(context.engine.steps.begin() + i, SearchStep());
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("/\\")) {
+					if(i > 0){
+						std::swap(context.engine.steps[i - 1], context.engine.steps[i]);
+						ImGui::PopID();
+						break;
+					}
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("\\/")) {
+					if (i + 1 < context.engine.steps.size()) {
+						std::swap(context.engine.steps[i], context.engine.steps[i + 1]);
+						ImGui::PopID();
+						break;
+					}
+				}
+
+				if (ImGui::BeginCombo("type", SearchStep::typeToString(step.type))) {
+					for (int i = 0; i < 3; i++) {
+						auto t = (SearchStep::Type)i;
+						if (ImGui::Selectable(SearchStep::typeToString(t), step.type == t)) {
+							step.type = t;
+						}
+					}
+					ImGui::EndCombo();
+				}
+
+				switch (step.type) {
+					case SearchStep::SEARCH: {
+						context.inputText(step.pattern, "pattern", "");
+						break;
+					}
+					case SearchStep::FILTER: {
+						context.inputText(step.pattern, "pattern", "");
+						ImGui::Checkbox("negate", &step.negate);
+						break;
+					}
+					case SearchStep::VICINITY: {
+						context.inputText(step.pattern, "pattern1", "");
+						context.inputText(step.pattern2, "pattern2", "");
+						break;
+					}
+					case SearchStep::INBETWEEN: {
+						context.inputText(step.pattern, "startPattern", "");
+						context.inputText(step.pattern2, "endPattern", "");
+						break;
+					}
+				}
+
+				ImGui::PopID();
+			}
+			if (ImGui::Button("+")) {
+				context.engine.steps.push_back(SearchStep());
+			}
+
+			ImGui::Separator();
 			if (ImGui::Button("Search") || context.isFirstFrame) {
 				context.isFirstFrame = false;
-				context.engine.search(context.input.getFiles(), context.search);
+				context.engine.search(context.input.getFiles());
 			}
 		}
 		ImGui::End();
@@ -225,6 +294,10 @@ void windowOutput() {
 				context.editor.SetReadOnly(true);
 				context.editor.SetShowWhitespaces(false);
 
+				context.editor.SetSelection(TextEditor::Coordinates(), TextEditor::Coordinates());
+				context.editor.SetCursorPosition(TextEditor::Coordinates());
+				TextEditor::Breakpoints points;
+				context.editor.SetBreakpoints(points);
 			}
 		}
 		ImGui::End();
@@ -235,8 +308,8 @@ int main(int argc, char* args[]) {
 	Window window;
 	window.init(1080, 720, "FileSearchTool", 2);
 	context.init();
-	
-	auto config = split(readFile("project.ini"), "\n");
+
+	auto config = split(readFile("project.ini"), "\n", true);
 	if (config.size() > 0) {
 		context.input.directory = config[0];
 	}
@@ -244,11 +317,28 @@ int main(int argc, char* args[]) {
 		context.input.files = config[1];
 	}
 	if (config.size() > 2) {
-		context.search = config[2];
+		context.outputFile = config[2];
 	}
 	if (config.size() > 3) {
-		context.outputFile = config[3];
+		try {
+			int stepCount = std::stoi(config[3]);
+
+			context.engine.steps.resize(stepCount);
+			for (int i = 0; i < stepCount; i++) {
+				if (config.size() > 4 + i * 3) {
+					context.engine.steps[i].type = (SearchStep::Type)std::stoi(config[4 + i * 4 + 0]);
+					context.engine.steps[i].pattern = config[4 + i * 4 + 1];
+					context.engine.steps[i].pattern2 = config[4 + i * 4 + 2];
+					context.engine.steps[i].negate = (SearchStep::Type)std::stoi(config[4 + i * 4 + 3]);
+				}
+			}
+
+		}
+		catch (...) {
+
+		}
 	}
+
 
 	if (!std::filesystem::exists("layout.ini")) {
 		if (std::filesystem::exists("../../../layout.ini")) {
@@ -271,7 +361,22 @@ int main(int argc, char* args[]) {
 		window.updateEnd();
 	}
 
-	writeFile("project.ini", join({ context.input.directory, context.input.files, context.search, context.outputFile }, "\n"));
+	int stepCount = context.engine.steps.size();
+	std::string configStr = join({ context.input.directory, context.input.files, context.outputFile, std::to_string(stepCount)}, "\n");
+	configStr += "\n";
+	for (int i = 0; i < stepCount; i++) {
+		configStr += std::to_string((int)context.engine.steps[i].type);
+		configStr += "\n";
+		configStr += context.engine.steps[i].pattern;
+		configStr += "\n";
+		configStr += context.engine.steps[i].pattern2;
+		configStr += "\n";
+		configStr += std::to_string((int)context.engine.steps[i].negate);
+		configStr += "\n";
+	}
+	writeFile("project.ini", configStr);
+
+	//writeFile("project.ini", join({ context.input.directory, context.input.files, context.search, context.outputFile }, "\n"));
 	window.shutdown();
 	return 0;
 }
