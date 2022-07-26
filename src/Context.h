@@ -7,11 +7,13 @@
 #include "pch.h"
 #include "SearchEngine.h"
 #include "TextEditor/TextEditor.h"
-#include "InputWindow.h"
+#include "Window.h"
+#include "Input.h"
 
 class Context {
 public:
-	InputWindow input;
+	Input input;
+	Window window;
 
 	int selectedFile = -1;
 	int selectedResult = -1;

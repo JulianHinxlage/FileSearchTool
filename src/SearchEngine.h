@@ -38,7 +38,7 @@ public:
 
 	bool stringSearch;
 	bool matchCase;
-	bool matchWholeLine;
+	bool matchFullLine;
 };
 
 class SearchEngine {

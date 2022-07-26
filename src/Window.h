@@ -15,6 +15,7 @@ public:
 
 	void close();
 	bool isOpen();
+	void* getContext();
 private:
 	void *window;
 };

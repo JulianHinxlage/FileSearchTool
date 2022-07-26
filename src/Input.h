@@ -6,7 +6,7 @@
 
 #include "pch.h"
 
-class InputWindow {
+class Input {
 public:
 	std::string directory;
 	std::string files;

@@ -233,10 +233,12 @@ void windowResults() {
 
 void windowFile() {
 	if (context.openFile) {
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		if (ImGui::Begin("File", &context.openFile, ImGuiWindowFlags_NoCollapse)) {
 			context.editor.Render("##");
 		}
 		ImGui::End();
+		ImGui::PopStyleVar();
 	}
 }
 
@@ -305,8 +307,8 @@ void windowOutput() {
 }
 
 int main(int argc, char* args[]) {
-	Window window;
-	window.init(1080, 720, "FileSearchTool", 2);
+	//Window window;
+	context.window.init(1080, 720, "FileSearchTool", 2);
 	context.init();
 
 	auto config = split(readFile("project.ini"), "\n", true);
@@ -347,8 +349,8 @@ int main(int argc, char* args[]) {
 	}
 	ImGui::GetIO().IniFilename = "layout.ini";
 
-	while (window.isOpen()) {
-		window.updateBegin();
+	while (context.window.isOpen()) {
+		context.window.updateBegin();
 		ImGui::DockSpaceOverViewport();
 
 		menuBar();
@@ -358,7 +360,7 @@ int main(int argc, char* args[]) {
 		windowFile();
 		windowOutput();
 
-		window.updateEnd();
+		context.window.updateEnd();
 	}
 
 	int stepCount = context.engine.steps.size();
@@ -377,7 +379,7 @@ int main(int argc, char* args[]) {
 	writeFile("project.ini", configStr);
 
 	//writeFile("project.ini", join({ context.input.directory, context.input.files, context.search, context.outputFile }, "\n"));
-	window.shutdown();
+	context.window.shutdown();
 	return 0;
 }
 

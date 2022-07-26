@@ -9,6 +9,11 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#if WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+#endif
+
 static void glfw_error_callback(int error, const char* description) {
 	fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
@@ -125,4 +130,12 @@ void Window::close() {
 
 bool Window::isOpen() {
 	return glfwWindowShouldClose((GLFWwindow*)window) == 0;
+}
+
+void* Window::getContext() {
+#if WIN32
+	return glfwGetWin32Window((GLFWwindow*)window);
+#else
+	return nullptr;
+#endif
 }
